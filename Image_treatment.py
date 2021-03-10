@@ -150,23 +150,10 @@ image_tech[image_tech==0] = np.nan
 
 ## 4. Creation of MSI map
 
-## 4a. Estimation of MSI for each category (may need to be updated)
-MSI_1=0.539
-MSI_2=0.446
-MSI_3=0.274
-MSI_4=0.043
-MSI_5=0.118
-MSI_6=0.017
-
-## 4b. We create a map with the same properties (size, datatype...) but with every value=0, then we add the MSI values according to the location of the technology categories in tech image
+MSI_array = [ 0.539, 0.446, 0.274, 0.043, 0.118, 0.017 ]
 image_MSI = np.zeros_like(image_tech)
-image_MSI[image_tech == 1] = MSI_1
-image_MSI[image_tech == 2] = MSI_2
-image_MSI[image_tech == 3] = MSI_3
-image_MSI[image_tech == 4] = MSI_4
-image_MSI[image_tech == 5] = MSI_5
-image_MSI[image_tech == 6] = MSI_6
-
+for i, msi in enumerate(MSI_array, 1):
+	image_MSI[image_tech == i] = msi
 
 ## 5. Bluring
 
