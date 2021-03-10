@@ -102,7 +102,7 @@ image_binary = image_intensity
 ## 2d. First convolution
 image_binary=Convolution_nb_nan(image_binary, window)
 image_copy1[image_binary<Threshold]=np.nan
-image_intensity=image_copy1 
+image_intensity=np.nan_to_num(image_copy1)
 
 ## 2e. Second convolution if necessary. If not, skip to step 3
 
@@ -120,7 +120,7 @@ image_binary = image_intensity
 ## 2h. Second convolution
 image_binary=Convolution_nb_nan(image_binary, window)
 image_copy2[image_binary<Threshold]=np.nan
-image_intensity=image_copy2
+image_intensity=np.nan_to_num(image_copy2)
 
 ## 2i. Compare your image to the examples in the ReadMe
 plt.figure()
@@ -138,7 +138,7 @@ image_intensity_temporary=image_intensity.copy()
 image_intensity_temporary_NaN = np.isnan(image_intensity_temporary)
 image_intensity_temporary[image_intensity_temporary>=0] = 1
 image_intensity_temporary[image_intensity_temporary_NaN] = 0
-image_binary=np.nan_to_num(image_copy2)
+image_binary=image_intensity_temporary
 
 ## 3b. eliminating points of value=0
 image_tech [image_tech==0] = np.nan
@@ -150,23 +150,10 @@ image_tech[image_tech==0] = np.nan
 
 ## 4. Creation of MSI map
 
-## 4a. Estimation of MSI for each category (may need to be updated)
-MSI_1=0.539
-MSI_2=0.446
-MSI_3=0.274
-MSI_4=0.043
-MSI_5=0.118
-MSI_6=0.017
-
-## 4b. We create a map with the same properties (size, datatype...) but with every value=0, then we add the MSI values according to the location of the technology categories in tech image
+MSI_array = [ 0.539, 0.446, 0.274, 0.043, 0.118, 0.017 ]
 image_MSI = np.zeros_like(image_tech)
-image_MSI[image_tech == 1] = MSI_1
-image_MSI[image_tech == 2] = MSI_2
-image_MSI[image_tech == 3] = MSI_3
-image_MSI[image_tech == 4] = MSI_4
-image_MSI[image_tech == 5] = MSI_5
-image_MSI[image_tech == 6] = MSI_6
-
+for i, msi in enumerate(MSI_array, 1):
+	image_MSI[image_tech == i] = msi
 
 ## 5. Bluring
 
@@ -198,23 +185,22 @@ Blur_MSI = Convolution_without_zero(image_MSI)
 Impact_MSI=Blur_MSI*Blur_intensity
 
 
-## Uncomment to show final images
-# plt.figure()
-# plt.imshow(Blur_MSI, cmap = 'rainbow')
-# plt.colorbar()
-# plt.title('Blured MSI')
-#
-# plt.figure()
-# plt.imshow(Impact_MSI, cmap="rainbow")
-# plt.colorbar()
-# plt.title('Impact MSI')
-# # plt.show()
-#
-# plt.figure()
-# plt.imshow(Blur_intensity, cmap="rainbow")
-# plt.colorbar()
-# plt.title("Blured Intensity")
-# plt.show()
+# Uncomment to show final images
+plt.figure()
+plt.imshow(Blur_MSI, cmap = 'rainbow')
+plt.colorbar()
+plt.title('Blured MSI')
+
+plt.figure()
+plt.imshow(Impact_MSI, cmap="rainbow")
+plt.colorbar()
+plt.title('Impact MSI')
+
+plt.figure()
+plt.imshow(Blur_intensity, cmap="rainbow")
+plt.colorbar()
+plt.title("Blured Intensity")
+plt.show()
 
  
 ## 7. Uploading images to computer
@@ -224,20 +210,20 @@ final_data = Blur_intensity
 nband = 1
 fmt = 'GTiff'
 driver = gdal.GetDriverByName(fmt)
-dst_dataset = driver.Create(path+"/Blur_intensity.tiff", ncol, nrow, nband, gdal.GDT_Float32)
+dst_dataset = driver.Create(path+"/Image_intensity.tiff", ncol, nrow, nband, gdal.GDT_Float32)
 dst_dataset.GetRasterBand(1).WriteArray(final_data.astype(float))
 dst_dataset = None
-np.save('Blur_Vrad',Blur_intensity) 
+np.save('Image_Vrad',Blur_intensity) 
 
 ## 7b. Uploading MSI
 final_data = Blur_MSI
 nband = 1
 fmt = 'GTiff'
 driver = gdal.GetDriverByName(fmt)
-dst_dataset = driver.Create(path+"/Blur_MSI.tiff", ncol, nrow, nband, gdal.GDT_Float32)
+dst_dataset = driver.Create(path+"/Image_MSI.tiff", ncol, nrow, nband, gdal.GDT_Float32)
 dst_dataset.GetRasterBand(1).WriteArray(final_data.astype(float))
 dst_dataset = None
-np.save('Impact_MSI',Impact_MSI)
+np.save('Image_MSI',Impact_MSI)
 
 ## 7c. Uploading Impact MSI
 final_data = Impact_MSI
