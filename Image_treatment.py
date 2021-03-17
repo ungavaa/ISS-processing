@@ -112,7 +112,7 @@ keep_Value=12
 Threshold=(keep_Value)/window**2
 
 ## 2g. We create a new binary image from the one we currently have (resulting from the first convolution)
-image_intensity_NaN = np.isnan(image_intensity)
+image_intensity_NaN = np.isnan(image_copy1)
 image_intensity [image_intensity>=0] = 1
 image_intensity[image_intensity_NaN] = 0
 image_binary = image_intensity
@@ -130,11 +130,10 @@ plt.title('Intensity with clean dark aeras')
 # plt.show()
 
 
-
 ## 3. Concordance...
 
 ## 3a. We make a copy of our image to create a new binary map without changing our current image
-image_intensity_temporary=image_intensity.copy()
+image_intensity_temporary=image_copy2.copy()
 image_intensity_temporary_NaN = np.isnan(image_intensity_temporary)
 image_intensity_temporary[image_intensity_temporary>=0] = 1
 image_intensity_temporary[image_intensity_temporary_NaN] = 0
@@ -150,7 +149,7 @@ image_tech[image_tech==0] = np.nan
 
 ## 4. Creation of MSI map
 
-MSI_array = [ 0.539, 0.446, 0.274, 0.043, 0.118, 0.017 ]
+MSI_array = [ 0.62, 0.43, 0.35, 0.08, 0.118, 0.017 ]
 image_MSI = np.zeros_like(image_tech)
 for i, msi in enumerate(MSI_array, 1):
 	image_MSI[image_tech == i] = msi
