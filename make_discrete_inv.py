@@ -17,7 +17,7 @@ import pytools as pt
 # Parameters
 focal_dist = 0.4   # focal distance (nm)
 obs_angle = 31
-vband_width = 110  # nm
+vband_width = 100  # nm
 
 
 # Loading np arrays files
@@ -77,7 +77,7 @@ list_spcts = os.listdir('Datas/spct')
 spcts = {spct[:6]: pt.load_spct(wav, norm_spectrum, f'Datas/spct/{spct}') for spct in list_spcts}
 lops = {lop: pt.load_lop(angles, f'Intrusif/Lights/{lop}_pcUPLIGHT.lop') for lop in ['5','20']}
 
-S = ((408000 * 9e-6) / focal_dist)**2  # Taille du pixel au sol (unit/??)
+S = ((408000 * 8.4e-6) / focal_dist)**2  # Taille du pixel au sol (unit/??)
 a = np.deg2rad(angles)
 mids = np.concatenate([[a[0]],np.mean([a[1:],a[:-1]],0),[a[-1]]])
 sinx = 2*np.pi*(np.cos(mids[:-1])-np.cos(mids[1:]))
