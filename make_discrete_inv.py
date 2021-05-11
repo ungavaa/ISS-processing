@@ -53,9 +53,9 @@ print('Calculating pow..')
 tech_equiv = {0: [np.nan,    0,  0], # spct | hlamp | lop
               1: ['Class1',  8, '5'],
               2: ['Class2',  8, '5'],
-              3: ['Class3',  2, '20'],
-              4: ['Class4',  8, '5'],
-              5: ['Class5',  8, '5']}
+              3: ['Class3',  2, '15'],
+              4: ['Class4',  8, '2'],
+              5: ['Class5',  8, '2']}
 
 # Arrays valeur pour chaque pixel
 arr_spcts= np.array([tech_equiv[v][0] for v in files['tech']])
@@ -75,7 +75,7 @@ angles = np.arange(181, dtype=float)
 # Load pre-normalize spcts & lops
 list_spcts = os.listdir('Datas/spct')
 spcts = {spct[:6]: pt.load_spct(wav, norm_spectrum, f'Datas/spct/{spct}') for spct in list_spcts}
-lops = {lop: pt.load_lop(angles, f'Intrusif/Lights/{lop}_pcUPLIGHT.lop') for lop in ['5','20']}
+lops = {lop: pt.load_lop(angles, f'Intrusif/Lights/{lop}_pcUPLIGHT.lop') for lop in ['2','5','15']}
 
 S = ((408000 * 8.4e-6) / focal_dist)**2  # Taille du pixel au sol (unit/??)
 a = np.deg2rad(angles)
