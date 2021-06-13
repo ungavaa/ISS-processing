@@ -8,23 +8,26 @@
 import gdal
 from geopy import distance
 import pyproj, osr
+import numpy as np
 import pandas as pd
 from osgeo import gdal
+import os
 
+# Create XYZ file from raster (terminal)
+# gdal_translate -of XYZ PATH_RASTER.tiff PATH_XYZ.csv
 
-# Convert raster to xyz file (terminal)
-# gdal_translate -of XYZ /home/jhoule42/Documents/Projet_Recherche/Datas/Georef/intensity_georef.tif /home/jhoule42/Documents/Projet_Recherche/Datas/XYZ/intensity_georef.csv
-# gdal_translate -of XYZ /home/jhoule42/Documents/Projet_Recherche/Datas/Georef/image_tech_non_floue_georef.tif /home/jhoule42/Documents/Projet_Recherche/Datas/XYZ/image_tech_non_floue_georef.csv
-
+PATH_RASTER = "Datas/Iss_img/Georef"
+PATH_XYZ = "Datas/Iss_img/XYZ"
+PATH_ARRAYS = "sources/np_arrays"
 
 params = dict()
 files = dict()
 
 print("Extracting values from geotiff..")
-for idx, img in enumerate(os.listdir(path_img)):
+for idx, img in enumerate(os.listdir(PATH_RASTER)):
 
-    raster = gdal.Open(f'Datas/Iss_img/Georef/{img})
-    x, y, val = np.loadtxt(f'Datas/Iss_img/XYZ/{img[:-4]}.csv', delimiter=' ').T
+    raster = gdal.Open(f'{PATH_RASTER}/{img}')
+    x, y, val = np.loadtxt(f'{PATH_XYZ}/{img[:-4]}.csv', delimiter=' ').T
     val[val == 0.] = np.nan  # convert 0 to nan
 
     # Extracting epsg from tiff
@@ -52,4 +55,4 @@ files.update({ 'coord': np.array((lat, lon)).T})
 
 # Save np arrays
 for arr in files:
-    np.save(f'Intrusif/np_arrays/np_{arr}', files[arr])
+    np.save(f'{PATH_ARRAYS}/np_{arr}', files[arr])
