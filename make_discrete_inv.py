@@ -23,12 +23,11 @@ inventory_name = "discrete_inventory.txt"   # filename of the discrete inventory
 
 PATH_ARRAYS = "sources/np_arrays"   # PATH to the arrays load from extract_from_tif.py
 PATH_ZONES_INVENTORY = "zones_inventory.csv"
-PATH_SPCT = "Datas/spct"   # PATH to a directory containing the different lamps spectrum
-PATH_LIGHTS = "."         # Path to the LIGHTS directory produce by Illumina
+PATH_SPCT = "Datas/spct"   # PATH to a directory containing the different class spectrum
+PATH_LIGHTS = "."          # Path to the LIGHTS directory produce by Illumina when executing illum inputs.
 
-# Note: You should add the desired lop file in the LIGTHS directory
-#       if the lop value wanted is missing
-
+# Note: The LIGTHS directory contain the spct and lop files. You should 
+# add the desired lop file in the LIGTHS directory if the lop value wanted is missing. 
 
 # Loading np arrays files
 files = { f: np.load(f'{PATH_ARRAYS}/np_{f}.npy') for f in
