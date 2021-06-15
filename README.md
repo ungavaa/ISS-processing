@@ -6,8 +6,8 @@ Outputs of the software are the Melatonin Suppression Index (MSI), the Visual ra
 defined as the product of the MSI with the visual radiance. The software can also produce inputs for the Illumina model.
 
 ### Obtain a discrete lamps inventory from ISS images
-In order to use this sowftware to create discrete lights inventory, you need to first install the Illumina model. This can be done by following the installations step in the Wiki of Martin Aubé:https://lx02.cegepsherbrooke.qc.ca/~aubema/index.php/Prof/IlluminaGuide2021.
-Make sure to execute: ```illum inputs``` to create the necessary files. Make sure to modify the parameters at the beginning of each execution script.
+In order to use this software to create discrete lights inventory, you need to first install the Illumina model. This can be done by following the installations step in the Wiki of Martin Aubé:https://lx02.cegepsherbrooke.qc.ca/~aubema/index.php/Prof/IlluminaGuide2021.
+Make sure to execute: ```illum inputs``` to create the necessary files. You will need to modify the parameters at the beginning of each execution script.
 
 1. Convert the georeferencing ISS images (raster) to XYZ files  with the following command:
 ``` 
