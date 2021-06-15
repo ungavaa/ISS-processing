@@ -13,5 +13,5 @@ Make sure to execute: ```illum inputs``` to create the necessary files. You will
 ``` 
 gdal_translate -of XYZ PATH_RASTER.tiff PATH_XYZ.csv
 ```
-2. Execute extract-output-data.py to save XYZ files to Numpy arrays contening data on the domain, intensity and technology of the lamps.
-3. Execute make_discrete_inv.py to create a discrete inventory of the ligths sources that can be used a an input to the Illumina model.
+2. Execute **extract-output-data.py** to save XYZ files to Numpy arrays contening data on the domain, intensity and technology of the lamps.
+3. Execute **make_discrete_inv.py** to create a discrete inventory of the ligths sources that can be used a an input to the Illumina model.
