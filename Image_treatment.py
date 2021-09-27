@@ -120,11 +120,10 @@ deviation = (distance_dev * focal_distance)/(pix_size*ISS_altitude) # influence 
 
 ## 5b. Defining the bluring fonction
 def Convolution_without_zero(image,stdev=deviation):
-	image = image.copy()
-	mask = image==0
-	image[mask] = np.nan
-	kernel = Gaussian2DKernel(x_stddev=stdev)
-	blurred = convolve(image, kernel)
+	im = image.copy()
+	mask = im==0
+	im[mask] = np.nan
+	blurred = convolve(im, Gaussian2DKernel(x_stddev=stdev))
 	blurred[mask] = np.nan
 	return blurred
 
@@ -138,10 +137,9 @@ Blur_MSI = Convolution_without_zero(image_MSI)
 ## 6. Creation of impact MSI image
 Impact_MSI = Blur_MSI*Blur_intensity
 
-
 # Uncomment to show final images
 plt.figure()
-plt.imshow(Blur_MSI, cmap = 'rainbow')
+plt.imshow(Blur_MSI, cmap='rainbow')
 plt.colorbar()
 plt.title('Blured MSI')
 
@@ -168,7 +166,7 @@ def save_geotiff( filename, data ):
 
 ## 7a. Saving intensity
 save_geotiff('Image_Vrad',Blur_intensity)
-np.save('Image_Vrad',Blur_intensity) 
+np.save('Image_Vrad',Blur_intensity)
 
 ## 7b. Saving MSI
 save_geotiff('Image_MSI',Blur_MSI)
