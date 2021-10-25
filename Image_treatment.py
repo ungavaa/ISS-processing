@@ -1,25 +1,25 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy.io import fits
 from astropy.utils.data import download_file
 from scipy import stats
 from astropy.convolution import convolve, Gaussian2DKernel, Box2DKernel
 from osgeo import gdal
 
-basename = "Corr_iss035e017088"
+basename = "./ISSparis12_image/Corr_iss032e017501"
 
-def open_fits(filename,dtype=np.float32):
-	with fits.open(filename) as f:
-		data = f[0].data.astype(dtype)
-	return data
+def open_tiff(filename,dtype=np.float32):
+	# Load file, and access the band and get a NumPy array
+	src = gdal.Open(filename, gdal.GA_Update)
+	band = src.GetRasterBand(1)
+	ar = band.ReadAsArray()
+	return src, ar
 
-image_intensity = open_fits(basename + '_ImpactVlG_GR.fits')
-image_tech = open_fits(basename + 'Composite.fits')
+src, image_intensity = open_tiff(basename + '_ImpactVlG_GR.tiff')
+src, image_tech = open_tiff(basename + 'Composite.tiff')
 
 ## 1. Start of treatment : elimination of noise
-
 ## 1a. We first eliminate negative data, as these are a mistake resulting of the pre-treatment
-image_intensity [image_intensity<0] = np.nan
+image_intensity[image_intensity<0] = np.nan
 
 ## 1b. Statistical data
 def compute_stats(image):
@@ -70,7 +70,7 @@ def image_to_binary(image):
 def convolution_nb_nan(image, window, keep_value):
 	im = image.copy()
 	threshold = keep_value / window**2
-	nb_nan = convolve(image_to_binary(image), Box2DKernel(width=width))
+	nb_nan = convolve(image_to_binary(image), Box2DKernel(width=window))
 	im[window**2 * nb_nan < keep_value] = np.nan
 	return np.nan_to_num(im)
 
@@ -161,8 +161,11 @@ def save_geotiff( filename, data ):
 	nrow, ncol = data.shape
 	driver = gdal.GetDriverByName('GTiff')
 	dst_dataset = driver.Create(filename+".tiff", ncol, nrow, nband, gdal.GDT_Float32)
+	dst_dataset.SetGeoTransform(src.GetGeoTransform())  ##sets same geotransform as input
+	dst_dataset.SetProjection(src.GetProjection())  ##sets same projection as input
 	dst_dataset.GetRasterBand(1).WriteArray(data.astype(float))
 	dst_dataset = None
+
 
 ## 7a. Saving intensity
 save_geotiff('Image_Vrad',Blur_intensity)
