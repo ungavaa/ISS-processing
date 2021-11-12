@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+from astropy.io import fits
 from astropy.utils.data import download_file
 from scipy import stats
 from astropy.convolution import convolve, Gaussian2DKernel, Box2DKernel
@@ -17,6 +19,8 @@ def open_tiff(filename,dtype=np.float32):
 src, image_intensity = open_tiff(basename + '_ImpactVlG_GR.tiff')
 src, image_tech = open_tiff(basename + 'Composite.tiff')
 
+src, image_intensity = open_tiff(basename + '_ImpactVlG_GR.tiff')
+src, image_tech = open_tiff(basename + 'Composite.tiff')
 ## 1. Start of treatment : elimination of noise
 ## 1a. We first eliminate negative data, as these are a mistake resulting of the pre-treatment
 image_intensity[image_intensity<0] = np.nan
@@ -60,6 +64,7 @@ plt.show()
 ##    If your image is already free of valued pixels in dark aeras following step 1,
 ##    comment this section and skip to step 3
 
+
 ## 2a. We define our convolution fonction
 def image_to_binary(image):
 	im = image.copy()
@@ -73,7 +78,6 @@ def convolution_nb_nan(image, window, keep_value):
 	nb_nan = convolve(image_to_binary(image), Box2DKernel(width=window))
 	im[window**2 * nb_nan < keep_value] = np.nan
 	return np.nan_to_num(im)
-
 
 ## 2b. We create a binary image where value pixels are equal to 1 and NaN pixels are equal to 0
 image_intensity = convolution_nb_nan( image_intensity, window=3, keep_value=4 )
@@ -133,7 +137,6 @@ Blur_intensity = Convolution_without_zero(image_intensity)
 ## 5d. Bluring MSI image
 Blur_MSI = Convolution_without_zero(image_MSI)
 
-
 ## 6. Creation of impact MSI image
 Impact_MSI = Blur_MSI*Blur_intensity
 
@@ -154,6 +157,11 @@ plt.colorbar()
 plt.title("Blured Intensity")
 plt.show()
 
+plt.figure()
+plt.imshow(image_tech, cmap="rainbow")
+plt.colorbar()
+plt.title("Technology")
+plt.show()
 
 ## 7. Saving results
 def save_geotiff( filename, data ):
@@ -168,6 +176,7 @@ def save_geotiff( filename, data ):
 
 
 ## 7a. Saving intensity
+
 save_geotiff('Image_Vrad',Blur_intensity)
 np.save('Image_Vrad',Blur_intensity)
 
@@ -178,3 +187,7 @@ np.save('Image_MSI',Blur_MSI)
 ## 7c. Saving Impact MSI
 save_geotiff('Impact_MSI',Impact_MSI)
 np.save('Impact_MSI',Impact_MSI)
+
+## 7d. Saving Technology
+save_geotiff('tech_image',image_tech)
+np.save('tech_image',image_tech)
