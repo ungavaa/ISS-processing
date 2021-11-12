@@ -10,7 +10,7 @@ import sys
 import numpy as np
 import pandas as pd
 import progressbar
-sys.path.append("/home/jhoule42/git/illumina") # path to Illumina model
+sys.path.append("/home/git/illumina") # path to Illumina model
 import pyproj
 import pytools as pt
 
@@ -21,7 +21,7 @@ obs_angle = 31     # observer_angle
 vband_width = 100  # nm
 inventory_name = "discrete_inventory.txt"   # filename of the discrete inventory
 
-PATH_ARRAYS = "sources/np_arrays"   # PATH to the arrays load from extract_from_tif.py
+PATH_ARRAYS = "sources"   # PATH to the arrays load from extract_from_tif.py
 PATH_ZONES_INVENTORY = "zones_inventory.csv"
 PATH_SPCT = "Datas/spct"   # PATH to a directory containing the different class spectrum
 PATH_LIGHTS = "."          # Path to the LIGHTS directory produce by Illumina when executing illum inputs.

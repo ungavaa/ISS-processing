@@ -11,23 +11,24 @@ import pyproj, osr
 import numpy as np
 import pandas as pd
 from osgeo import gdal
-import os
+import os, sys
 
 # Create XYZ file from raster (use in terminal)
 # gdal_translate -of XYZ PATH_RASTER.tiff PATH_XYZ.csv
 
-PATH_RASTER = "Datas/Iss_img/Georef" # PATH to directory containing raster files
-PATH_XYZ    = "Datas/Iss_img/XYZ"    # PATH to directory containing XYZ.csv files
-PATH_ARRAYS = "sources/np_arrays"    # PATH to directory where np arrays will be write
+PATH_RASTER = "/home/hlinares/paris/ISS-processing/rasters" # PATH to directory containing raster files
+PATH_XYZ    = "/home/hlinares/paris/ISS-processing/csvs"    # PATH to directory containing XYZ.csv files
+PATH_ARRAYS = "/home/hlinares/paris/ISS-processing/sources"    # PATH to directory where np arrays will be write
 
 params = dict()
 files = dict()
 
 print("Extracting values from geotiff..")
+
 for idx, img in enumerate(os.listdir(PATH_RASTER)):
 
     raster = gdal.Open(f'{PATH_RASTER}/{img}')
-    x, y, val = np.loadtxt(f'{PATH_XYZ}/{img[:-4]}.csv', delimiter=' ').T
+    x, y, val = np.loadtxt(f'{PATH_XYZ}/{img[:-5]}.csv', delimiter=' ').T
     val[val == 0.] = np.nan  # convert 0 to nan
 
     # Extracting epsg from tiff
@@ -37,8 +38,7 @@ for idx, img in enumerate(os.listdir(PATH_RASTER)):
     lat, lon = proj.transform(x, y)
 
     params.update({ img.split('_')[0]: (np.around(lat, 5), np.around(lon, 5), val)})
-
-
+print(params)
 # Create mask to remove nan
 mask  = ~np.isnan(params['tech'][2]) &  ~np.isnan(params['intensity'][2])
 lat   = params['tech'][0][mask]
