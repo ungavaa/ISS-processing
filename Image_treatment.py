@@ -75,7 +75,7 @@ small_values = image_intensity[image_intensity < median]
 # mean2, median2, standard_deviation2, mode2 = compute_stats(small_values)
 
 n, bins, patches = plt.hist(
-    small_values[~np.isnan(small_values)].flatten(), bins=100
+    small_values[~np.isnan(small_values)].flatten(), bins=50
 )
 plt.show()
 # index_max = np.argmax(n)
