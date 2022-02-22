@@ -7,7 +7,7 @@ from astropy.convolution import Box2DKernel, convolve
 from osgeo import gdal
 from scipy import stats
 
-with open("params.txt") as f:
+with open("params") as f:
     p = yaml.safe_load(f)
 
 basename = p["basename"]

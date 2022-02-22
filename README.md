@@ -20,7 +20,7 @@ You will need to **modify the parameters** at the beginning of each execution sc
 <p><b>1. Image_treatment.py</b></p
 <p><b>2. Convert the georeferencing ISS images (raster) to XYZ files:</b></p>
 
-``` 
+```
 gdal_translate -of XYZ PATH_RASTER.tiff PATH_XYZ.csv
 ```
 
@@ -31,4 +31,3 @@ gdal_translate -of XYZ PATH_RASTER.tiff PATH_XYZ.csv
 
 <h2> Contributors </h2>
 This work was made by Martin Aubé, Julien-Pierre Houle, Nikki Veilleux, Justine Desmarais, Emie Bordeleau and Alexandre Simoneau.
-
