@@ -8,8 +8,8 @@ from pyproj import Proj, transform
 with open("params") as f:
     p = yaml.safe_load(f)
 
-seuil = p["seuil"]
-filename = p["filename"]
+threshold = p["threshold"]
+filename = p["basename"] + p["intensity"]
 
 hdul = fits.open(filename)
 im = hdul[0].data
@@ -18,7 +18,7 @@ plt.imshow(im, vmin=0, vmax=1.5)
 plt.colorbar()
 plt.savefig("image.png")
 
-Y, X = np.where(im > seuil)
+Y, X = np.where(im > threshold)
 
 with open("xy.dat", "w") as f:
     for x, y in zip(X, Y):

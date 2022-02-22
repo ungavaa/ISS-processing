@@ -1,0 +1,18 @@
+focal_dist: 0.4 # Focal length of the camera
+obs_angle: 31 # Observing angle of the  ISS image
+vband_width: 100 # Width of the V band in nm
+inventory_name: discrete_inventory.txt # output inventory name
+
+PATH_ARRAYS: sources
+PATH_ZONES_INVENTORY: zones_inventory.csv
+PATH_SPCT: Datas/spct
+PATH_LIGHTS: .
+
+spectrum: Class_spct.csv # Class equivalence table filename
+
+basename: # ISS images' basename
+intensity: _ImpactVlG_GR.tiff # Intensity image suffix
+tech: Composite.tiff # Technology image suffix
+
+distance: 100 # max distance from street
+threshold: 0.1 # Limiting brightness
