@@ -2,13 +2,17 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
-from astropy.convolution import Box2DKernel, Gaussian2DKernel, convolve
-from astropy.io import fits
-from astropy.utils.data import download_file
+import yaml
+from astropy.convolution import Box2DKernel, convolve
 from osgeo import gdal
 from scipy import stats
 
-basename = "./Paris2021/Corr_iss065e053385"
+with open("params.txt") as f:
+    p = yaml.safe_load(f)
+
+basename = p["basename"]
+intensity = p["intensity"]
+tech = p["tech"]
 
 
 def open_tiff(filename, dtype=np.float32):
@@ -20,8 +24,8 @@ def open_tiff(filename, dtype=np.float32):
 
 
 # open intensity and technology (spectral class) images
-src, image_intensity = open_tiff(basename + "_ImpactVlG_GR.tiff")  # Impact
-src, image_tech = open_tiff(basename + "Composite.tiff")
+src, image_intensity = open_tiff(basename + intensity)  # Impact
+src, image_tech = open_tiff(basename + tech)
 
 
 # open signal to noise ratio images
@@ -30,10 +34,12 @@ src, image_snrR = open_tiff(basename + "SNRR1o2_rect.tiff")
 src, image_snrG2 = open_tiff(basename + "SNRG2o2_rect.tiff")
 src, image_snrG3 = open_tiff(basename + "SNRG3o2_rect.tiff")
 
-##0. Find saturated pixels that have no value in the intensity image and replace the nan by the maximum of the image
+# 0. Find saturated pixels that have no value in the intensity image and
+#    replace the nan by the maximum of the image
 sat = sys.float_info.max
 novalue = -1e30
-# changing sat values (nan) to number (sat value), the nan that corresponds to no data will change to 0
+# changing sat values (nan) to number (sat value), the nan that corresponds
+#    to no data will change to 0
 image_snrB = np.nan_to_num(image_snrB)
 image_snrR = np.nan_to_num(image_snrR)
 image_snrG2 = np.nan_to_num(image_snrG2)
@@ -50,12 +56,12 @@ image_intensity[
     )
 ] = np.nanmax(image_intensity)
 
-## 1. Start of treatment : elimination of noise
-## 1a. Eliminate negative data, as these are a mistake resulting of the pre-treatment
+# 1. Start of treatment : elimination of noise
+# 1a. Eliminate negative data, mistake resulting of the pre-treatment
 image_intensity[image_intensity < 0] = np.nan
 
 
-## 1b. Statistical data
+# 1b. Statistical data
 def compute_stats(image):
     mean = np.nanmean(image)
     median = np.nanmedian(image)
@@ -67,9 +73,9 @@ def compute_stats(image):
 
 mean, median, standard_deviation, mode = compute_stats(image_intensity)
 
-## 1c. We create a temporary map with the pixels of less value since the noise should be
-##     smaller or around the same value as the less valuable pixels.
-##     We then extract statistical data of these small values
+# 1c. We create a temporary map with the pixels of less value since the noise
+#     should be smaller or around the same value as the less valuable pixels.
+#     We then extract statistical data of these small values
 
 small_values = image_intensity[image_intensity < median]
 # mean2, median2, standard_deviation2, mode2 = compute_stats(small_values)
@@ -87,7 +93,8 @@ for i, value in enumerate(n):
     else:
         maxi = value
 
-## 1d. Using the statistical data on hand, we estimate the value of the background, defined as the center value of the bin with most pixels.
+# 1d. Using the statistical data on hand, we estimate the value of the
+# background, defined as the center value of the bin with most pixels.
 # background= (bins[index_max]+bins[index_max+1])/2 + standard_deviation2*3
 background = bins[index + 1]  # the right hand border of the bin
 
@@ -97,10 +104,12 @@ plt.colorbar()
 plt.title("Intensity with noise")
 plt.show()
 
-## this value can change. Modifie accordingly in order to achieve the best results (see step 1.f)
+# this value can change. Modifie accordingly in order to achieve the best
+#    results (see step 1.f)
 image_intensity -= background
 
-## 1e. Eliminating negative pixels created by our treatment of the noise in the image
+# 1e. Eliminating negative pixels created by our treatment of the noise
+#     in the image
 image_intensity[image_intensity < 0] = np.nan
 small_values = image_intensity[image_intensity < median]
 n, bins, patches = plt.hist(
@@ -108,9 +117,11 @@ n, bins, patches = plt.hist(
 )
 plt.show()
 
-## 1f. Compare your image to the ones in ReadMe for reference as well as Google maps to know which zones should emit light or not
-##     We want to eliminate a certain quantity of small value pixels in aeras that shouldn't emit light
-##     At the same time, we want to limit the values eliminated in aeras where light should be emitted
+# 1f. Compare your image to the ones in ReadMe for reference as well as Google
+#     maps to know which zones should emit light or not. We want to eliminate a
+#     certain quantity of small value pixels in aeras that shouldn't emit light
+#     At the same time, we want to limit the values eliminated in aeras where
+#     light should be emitted
 
 plt.figure()
 plt.imshow(image_intensity, cmap="rainbow")
@@ -118,8 +129,11 @@ plt.colorbar()
 plt.title("Intensity without noise")
 plt.show()
 
-# 1.5. Finding unexplicable (so far) void pixels surrounded by high intensity pixels and filling them with the mean of the pixels around
-# creating binary images in intensity, value=1, nan=0
+# 1.5. Finding unexplicable (so far) void pixels surrounded by high intensity
+#      pixels and filling them with the mean of the pixels around
+#      creating binary images in intensity, value=1, nan=0
+
+
 def image_to_binary(image):
     im = image.copy()
     im[im >= 0] = 1
@@ -163,11 +177,11 @@ image_intensity, image_tech = convolution_nb_void(
 )
 
 
-## 2. Elimination of remaining values in dark aeras
-##    If your image is already free of valued pixels in dark aeras following step 1,
-##    comment this section and skip to step 3
+# 2. Elimination of remaining values in dark aeras
+#    If your image is already free of valued pixels in dark aeras following
+#    step 1, comment this section and skip to step 3
 
-## 2a. We define our convolution fonction
+# 2a. We define our convolution fonction
 def convolution_nb_nan(image, window, keep_value):
     im = image.copy()
     nb_nan = convolve(image_to_binary(image), Box2DKernel(width=window))
@@ -177,13 +191,14 @@ def convolution_nb_nan(image, window, keep_value):
     return im  # np.nan_to_num(im)
 
 
-## 2b. We create a binary image where value pixels are equal to 1 and NaN pixels are equal to 0
+# 2b. We create a binary image where value pixels are equal to 1 and NaN pixels
+#     are equal to 0
 image_intensity = convolution_nb_nan(image_intensity, window=4, keep_value=2)
 
-## 2c. Second convolution if necessary. If not, skip to step 3
+# 2c. Second convolution if necessary. If not, skip to step 3
 image_intensity = convolution_nb_nan(image_intensity, window=4, keep_value=2)
 
-## 2d. Compare your image to the examples in the ReadMe
+# 2d. Compare your image to the examples in the ReadMe
 plt.figure()
 plt.imshow(image_intensity, cmap="rainbow")
 plt.colorbar()
@@ -191,7 +206,7 @@ plt.title("Intensity with clean dark aeras")
 plt.show()
 
 
-## 3. Concordance between intensity and technology images
+# 3. Concordance between intensity and technology images
 
 
 def int_tech_comparison(intensity, im_tech):
@@ -222,7 +237,10 @@ plt.colorbar()
 plt.title("Technology")
 plt.show()
 
-## 7. Saving results
+
+# 7. Saving results
+
+
 def save_geotiff(filename, data):
     nband = 1
     nrow, ncol = data.shape
@@ -238,19 +256,19 @@ def save_geotiff(filename, data):
     dst_dataset = None
 
 
-## 7a. Saving intensity
+# 7a. Saving intensity
 
 save_geotiff("Image_Vrad", image_intensity)
 np.save("Image_Vrad", image_intensity)
 
-## 7b. Saving MSI
+# 7b. Saving MSI
 # save_geotiff('Image_MSI',Blur_MSI)
 # np.save('Image_MSI',Blur_MSI)
 
-## 7c. Saving Impact MSI
+# 7c. Saving Impact MSI
 # save_geotiff('Impact_MSI',Impact_MSI)
 # np.save('Impact_MSI',Impact_MSI)
 
-## 7d. Saving Technology
+# 7d. Saving Technology
 save_geotiff("tech_image", image_tech)
 np.save("tech_image", image_tech)
