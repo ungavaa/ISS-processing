@@ -23,20 +23,22 @@ def open_tiff(filename, dtype=np.float32):
 
 
 src, im = open_tiff(filename)
+GT = src.GetGeoTransform()
 
 df = pd.DataFrame()
-df["Y"], df["X"] = np.where(im > threshold * im.max())
+df["Y"], df["X"] = np.where(im > 0)
 df["val"] = im[df["Y"], df["X"]]
+df["lons"] = GT[0] + (df["X"] + 0.5) * GT[1] + (df["Y"] + 0.5) * GT[2]
+df["lats"] = GT[3] + (df["X"] + 0.5) * GT[4] + (df["Y"] + 0.5) * GT[5]
+df.to_csv(
+    "xyz.csv", columns=["lons", "lats", "val"], header=False, index=False
+)
 
-CRPIX1 = hdul[0].header["CRPIX1"]
-CDELT1 = hdul[0].header["CDELT1"]
-CRVAL1 = hdul[0].header["CRVAL1"]
-CRPIX2 = hdul[0].header["CRPIX2"]
-CDELT2 = hdul[0].header["CDELT2"]
-CRVAL2 = hdul[0].header["CRVAL2"]
-
-df["lons"] = (df["X"] - CRPIX1) * CDELT1 + CRVAL1
-df["lats"] = (df["Y"] - CRPIX2) * CDELT2 + CRVAL2
+df = pd.DataFrame()
+df["Y"], df["X"] = np.where(im > threshold * np.nanmax(im))
+df["val"] = im[df["Y"], df["X"]]
+df["lons"] = GT[0] + (df["X"] + 0.5) * GT[1] + (df["Y"] + 0.5) * GT[2]
+df["lats"] = GT[3] + (df["X"] + 0.5) * GT[4] + (df["Y"] + 0.5) * GT[5]
 
 if p["distance"]:
     srs = (
@@ -86,5 +88,5 @@ if p["distance"]:
     df = df[distance_m < p["distance"]]
 
 df.to_csv(
-    "xyz.csv", columns=["lons", "lats", "val"], header=False, index=False
+    "obs.csv", columns=["lons", "lats", "val"], header=False, index=False
 )
