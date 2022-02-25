@@ -10,9 +10,6 @@ from pyproj import Proj, transform
 with open("params") as f:
     p = yaml.safe_load(f)
 
-threshold = p["threshold"]
-filename = "Image_Vrad.tiff"
-
 
 def open_tiff(filename, dtype=np.float32):
     # Load file, and access the band and get a NumPy array
@@ -22,23 +19,24 @@ def open_tiff(filename, dtype=np.float32):
     return src, ar
 
 
-src, im = open_tiff(filename)
+src, im = open_tiff(f"{p['wd']}/Vrad.tiff")
 GT = src.GetGeoTransform()
 
-df = pd.DataFrame()
-df["Y"], df["X"] = np.where(im > 0)
-df["val"] = im[df["Y"], df["X"]]
-df["lons"] = GT[0] + (df["X"] + 0.5) * GT[1] + (df["Y"] + 0.5) * GT[2]
-df["lats"] = GT[3] + (df["X"] + 0.5) * GT[4] + (df["Y"] + 0.5) * GT[5]
-df.to_csv(
-    "xyz.csv", columns=["lons", "lats", "val"], header=False, index=False
-)
+src, tech = open_tiff(f"{p['wd']}/tech.tiff")
 
 df = pd.DataFrame()
-df["Y"], df["X"] = np.where(im > threshold * np.nanmax(im))
-df["val"] = im[df["Y"], df["X"]]
-df["lons"] = GT[0] + (df["X"] + 0.5) * GT[1] + (df["Y"] + 0.5) * GT[2]
-df["lats"] = GT[3] + (df["X"] + 0.5) * GT[4] + (df["Y"] + 0.5) * GT[5]
+Y, X = np.where((im > 0) & (tech > 0))
+df["val"] = im[Y, X]
+df["tech"] = tech[Y, X]
+df["lons"] = GT[0] + (X + 0.5) * GT[1] + (Y + 0.5) * GT[2]
+df["lats"] = GT[3] + (X + 0.5) * GT[4] + (Y + 0.5) * GT[5]
+df.to_pickle(f"{p['wd']}/xyz.pickle")
+
+df = pd.DataFrame()
+Y, X = np.where(im > p["threshold"] * np.nanmax(im))
+df["val"] = im[Y, X]
+df["lons"] = GT[0] + (X + 0.5) * GT[1] + (Y + 0.5) * GT[2]
+df["lats"] = GT[3] + (X + 0.5) * GT[4] + (Y + 0.5) * GT[5]
 
 if p["distance"]:
     srs = (
@@ -88,5 +86,8 @@ if p["distance"]:
     df = df[distance_m < p["distance"]]
 
 df.to_csv(
-    "obs.csv", columns=["lons", "lats", "val"], header=False, index=False
+    f"{p['wd']}/obs.csv",
+    columns=["lons", "lats", "val"],
+    header=False,
+    index=False,
 )

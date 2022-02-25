@@ -1,7 +1,7 @@
-import sys
+import os
+from glob import glob
 
 import astropy.io.fits as pyfits
-import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 from astropy.convolution import Box2DKernel, convolve
@@ -47,21 +47,36 @@ def open_tiff(filename, dtype=np.float32):
 
 with open("params") as f:
     p = yaml.safe_load(f)
-basename = p["basename"]
+
+exp_folds = glob("iss???e*/")
+if not exp_folds:
+    print("ERROR: Data folder not found. Please make sure it was not renamed.")
+    exit()
+if len(exp_folds) > 1:
+    print(f"ERROR: Too many data folders found. {exp_folds}")
+    exit()
+
+exp_fold = exp_folds[0]
+basename, ts = exp_fold.split("_")
+print(f"Data `{basename}` ({ts[:4]}-{ts[4:6]}-{ts[6:8]}) found.")
 
 # open intensity and technology (spectral class) images
-src, image_intensity = open_tiff(f"popular/Corr_{basename}_ImpactVlG_GR.fits")
-src, image_tech = open_tiff(f"popular/Corr_{basename}CompositeW.fits")
+src, image_intensity = open_tiff(
+    f"{exp_fold}/popular/Corr_{basename}_ImpactVlG_GR.fits"
+)
+src, image_tech = open_tiff(
+    f"{exp_fold}/popular/Corr_{basename}CompositeW.fits"
+)
 
 # open signal to noise ratio images
 images_snr = [
-    open_tiff(f"quality/Corr_{basename}SNR{band}o2_rect.tiff")[1]
+    open_tiff(f"{exp_fold}/quality/Corr_{basename}SNR{band}o2_rect.tiff")[1]
     for band in ["R1", "G2", "G3", "B4"]
 ]
 
 # 0. Find saturated pixels that have no value in the intensity image and
 #    replace the nan by the maximum of the image
-sat = sys.float_info.max
+sat = os.sys.float_info.max
 novalue = -1e30
 # changing sat values (nan) to number (sat value), the nan that corresponds
 # to no data will change to 0
@@ -81,10 +96,10 @@ image_intensity[image_intensity < 0] = np.nan
 def compute_stats(image):
     mean = np.nanmean(image)
     median = np.nanmedian(image)
-    standard_deviation = np.nanstd(image)
+    stdev = np.nanstd(image)
     mode = stats.mode(image[~np.isnan(image)], axis=None)[0][0]
-    print(f"{mode=} {mean=} {median=} {standard_deviation=}")
-    return mean, median, standard_deviation, mode
+    print(f"{mode=:.3g}  {mean=:.3g}  {median=:.3g}  {stdev=:.3g}")
+    return mean, median, stdev, mode
 
 
 mean, median, standard_deviation, mode = compute_stats(image_intensity)
@@ -96,10 +111,9 @@ mean, median, standard_deviation, mode = compute_stats(image_intensity)
 small_values = image_intensity[image_intensity < median]
 # mean2, median2, standard_deviation2, mode2 = compute_stats(small_values)
 
-n, bins, patches = plt.hist(
+n, bins = np.histogram(
     small_values[~np.isnan(small_values)].flatten(), bins=50
 )
-plt.show()
 # index_max = np.argmax(n)
 maxi = 0
 for i, value in enumerate(n):
@@ -114,12 +128,6 @@ for i, value in enumerate(n):
 # background= (bins[index_max]+bins[index_max+1])/2 + standard_deviation2*3
 background = bins[index + 1]  # the right hand border of the bin
 
-plt.figure()
-plt.imshow(image_intensity, cmap="rainbow")
-plt.colorbar()
-plt.title("Intensity with noise")
-plt.show()
-
 # this value can change. Modifie accordingly in order to achieve the best
 #    results (see step 1.f)
 image_intensity -= background
@@ -128,22 +136,15 @@ image_intensity -= background
 #     in the image
 image_intensity[image_intensity < 0] = np.nan
 small_values = image_intensity[image_intensity < median]
-n, bins, patches = plt.hist(
+n, bins = np.histogram(
     small_values[~np.isnan(small_values)].flatten(), bins=100
 )
-plt.show()
 
 # 1f. Compare your image to the ones in ReadMe for reference as well as Google
 #     maps to know which zones should emit light or not. We want to eliminate a
 #     certain quantity of small value pixels in aeras that shouldn't emit light
 #     At the same time, we want to limit the values eliminated in aeras where
 #     light should be emitted
-
-plt.figure()
-plt.imshow(image_intensity, cmap="rainbow")
-plt.colorbar()
-plt.title("Intensity without noise")
-plt.show()
 
 # 1.5. Finding unexplicable (so far) void pixels surrounded by high intensity
 #      pixels and filling them with the mean of the pixels around
@@ -213,13 +214,6 @@ image_intensity = convolution_nb_nan(image_intensity, window=4, keep_value=2)
 # 2c. Second convolution if necessary. If not, skip to step 3
 image_intensity = convolution_nb_nan(image_intensity, window=4, keep_value=2)
 
-# 2d. Compare your image to the examples in the ReadMe
-plt.figure()
-plt.imshow(image_intensity, cmap="rainbow")
-plt.colorbar()
-plt.title("Intensity with clean dark aeras")
-plt.show()
-
 
 # 3. Concordance between intensity and technology images
 
@@ -235,19 +229,6 @@ def int_tech_comparison(intensity, im_tech):
 
 image_tech = int_tech_comparison(image_intensity, image_tech)
 image_tech[image_tech == 0] = np.nan
-
-# plt.figure()
-# plt.imshow(image_intensity, cmap="rainbow")
-# plt.colorbar()
-# plt.title("Image Intensity")
-# plt.show()
-#
-# plt.figure()
-# plt.imshow(image_tech, cmap="rainbow")
-# plt.colorbar()
-# plt.title("Technology")
-# plt.show()
-
 
 # 7. Saving results
 
@@ -267,19 +248,8 @@ def save_geotiff(filename, data):
     dst_dataset = None
 
 
-# 7a. Saving intensity
+if not os.path.isdir(p["wd"]):
+    os.makedirs(p["wd"])
 
-save_geotiff("Image_Vrad", image_intensity)
-np.save("Image_Vrad", image_intensity)
-
-# 7b. Saving MSI
-# save_geotiff('Image_MSI',Blur_MSI)
-# np.save('Image_MSI',Blur_MSI)
-
-# 7c. Saving Impact MSI
-# save_geotiff('Impact_MSI',Impact_MSI)
-# np.save('Impact_MSI',Impact_MSI)
-
-# 7d. Saving Technology
-save_geotiff("tech_image", image_tech)
-np.save("tech_image", image_tech)
+save_geotiff(f"{p['wd']}/Vrad", image_intensity)
+save_geotiff(f"{p['wd']}/tech", image_tech)

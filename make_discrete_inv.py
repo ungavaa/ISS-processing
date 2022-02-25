@@ -9,7 +9,6 @@ import os
 
 import numpy as np
 import pandas as pd
-import pyproj
 import pytools as pt
 import yaml
 
@@ -38,41 +37,6 @@ files = {
     f: np.load(f"{PATH_ARRAYS}/np_{f}.npy")
     for f in ["domain", "coord", "intensity", "tech"]
 }
-
-# Read values from zones inventory
-df_zones = pd.read_csv(PATH_ZONES_INVENTORY)
-df_zones = df_zones.sort_values("radius", ascending=False).reset_index(
-    drop=True
-)
-zones_p = {
-    p: df_zones[f"{p}"].to_numpy()
-    for p in ["lat", "lon", "radius", "do", "ho", "fo", "hl"]
-}
-
-
-# Convert lat, lon zones to meters (2949)
-proj = pyproj.Transformer.from_crs(4326, 2949, always_xy=False)
-i, j = proj.transform(zones_p["lat"], zones_p["lon"])
-zones_center = np.array((i, j)).T
-zones = np.zeros((len(files["domain"])))
-hobs = np.zeros((len(files["domain"])))
-dobs = np.zeros((len(files["domain"])))
-fobs = np.zeros((len(files["domain"])))
-hlamp = np.zeros((len(files["domain"])))
-
-print("Create circulars zones masks..")
-for idx, center in enumerate(zones_center):
-    dist_from_center = np.sqrt(
-        (files["domain"][:, 0] - center[0]) ** 2
-        + (files["domain"][:, 1] - center[1]) ** 2
-    )
-    mask = dist_from_center <= zones_p["radius"][idx]
-
-    zones[mask] = idx
-    hobs[zones == idx] = zones_p["ho"][idx]
-    dobs[zones == idx] = zones_p["do"][idx]
-    fobs[zones == idx] = zones_p["fo"][idx]
-    hlamp[zones == idx] = zones_p["hl"][idx]
 
 
 print("Calculating pow..")
@@ -153,10 +117,10 @@ for idx in range(len(keys)):
 print("Creating discrete inventory..")
 df = pd.DataFrame(files["coord"], columns=["#lat", "lon"])
 df["pow"] = POW.tolist()
-df["hobs"] = hobs.tolist()
-df["dobs"] = dobs.tolist()
-df["fobs"] = fobs.tolist()
-df["hlamp"] = hlamp.tolist()
+df["hobs"] = 0
+df["dobs"] = 0
+df["fobs"] = 0
+df["hlamp"] = 0
 df["spct"] = arr_spcts.tolist()
 df["lop"] = arr_lops.tolist()
 df.to_csv(inventory_name, index=False, sep=" ")
