@@ -1,85 +1,46 @@
-# ******************************************************************************
-#                      Make discrete inventory from ISS images
-#
-# Auteur : Julien-Pierre Houle
-# Date :   June 2021
-# ******************************************************************************
+#!/usr/bin/env python3
 
-import os
+from glob import glob
 
+import illum.pytools as pt
 import numpy as np
 import pandas as pd
-import pytools as pt
 import yaml
 
-with open("params") as f:
+with open("iss_params.in") as f:
     p = yaml.safe_load(f)
 
-# PARAMETERS
-focal_dist = p["focal_dist"]  # focal distance (nm)
-obs_angle = p["obs_angle"]  # observer_angle
-vband_width = p["vband_width"]  # nm
-inventory_name = p["inventory_name"]  # filename of the discrete inventory
+abc = pd.read_csv(p["tech_table"])
+error = False
+for spct in abc["spct"]:
+    if not glob(f"Lights/{spct}_*.spct"):
+        print(f"ERROR: `{spct}` spectral emission definition file not found.")
+        error = True
+for lop in abc["lop"]:
+    if not glob(f"Lights/{lop}_*.lop"):
+        print(f"ERROR: `{lop}` angular emission definition file not found.")
+        error = True
+if error:
+    quit()
 
-# PATH to the arrays load from extract_from_tif.py
-PATH_ARRAYS = p["PATH_ARRAY"]
-PATH_ZONES_INVENTORY = p["PATH_ZONES_INVENTORY"]
-# PATH to a directory containing the different class spectrum
-PATH_SPCT = p["PATH_SPCT"]
-# Path to the LIGHTS directory produce by Illumina when executing illum inputs.
-PATH_LIGHTS = p["PATH_LIGHTS"]
-
-# Note: The LIGTHS directory contain the spct and lop files. You should add the
-# desired lop file in the LIGTHS directory if the lop value wanted is missing.
-
-# Loading np arrays files
-files = {
-    f: np.load(f"{PATH_ARRAYS}/np_{f}.npy")
-    for f in ["domain", "coord", "intensity", "tech"]
-}
-
-
-print("Calculating pow..")
-abc = pd.read_csv(["spectrum"])
-spectrum = abc["class_spct"]
-Uplight = abc["lop"]
-tech_equiv = {
-    0: [np.nan, 0],  # spct | lop
-    1: ["ClassI", "5"],
-    2: ["ClassII", "5"],
-    3: ["ClassIII", "15"],
-    4: ["ClassIV", "1"],
-    5: ["ClassV", "1"],
-}  # Modification 2 pour 1 (car pas de 2.lop dans Lights)
-
-# Arrays valeur pour chaque pixel
-arr_spcts = np.array([tech_equiv[v][0] for v in files["tech"]])
-arr_lops = np.array([tech_equiv[v][1] for v in files["tech"]])
-keys = list(zip(arr_lops, arr_spcts))
-
-
-wav, norm_spectrum = np.loadtxt(
-    f"{PATH_LIGHTS}/Lights/photopic.dat", skiprows=1
-).T
-sptc = np.loadtxt(f"{PATH_LIGHTS}/Lights/scotopic.dat", skiprows=1)
-wl, refl = np.loadtxt(f"{PATH_LIGHTS}/Lights/asphalt.aster").T
-wl *= 1000.0
-refl /= 100.0
-asphalt = np.interp(wav, wl, refl)
+wav, norm_spectrum = np.loadtxt("Lights/photopic.dat", skiprows=1).T
+norm_spectrum /= norm_spectrum.max()
+wl, refl = np.loadtxt("Lights/asphalt.aster").T
+refl = np.interp(wav, wl * 1000, refl / 100)
 angles = np.arange(181, dtype=float)
 
 # Load pre-normalize spcts & lops
-list_spcts = os.listdir(PATH_SPCT)
-spcts = {
-    spct.split("_")[0]: pt.load_spct(wav, norm_spectrum, f"{PATH_SPCT}/{spct}")
-    for spct in list_spcts
-}
-lops = {
-    lop: pt.load_lop(angles, f"{PATH_LIGHTS}/Lights/{lop}_pcUPLIGHT.lop")
-    for lop in ["1", "5", "15"]
-}
+spcts = np.array(
+    [
+        pt.load_spct(wav, norm_spectrum, glob(f"Lights/{spct}_*.spct")[0])
+        for spct in abc["spct"]
+    ]
+)
+lops = np.array(
+    [pt.load_lop(angles, glob(f"Lights/{lop}_*.lop")[0]) for lop in abc["lop"]]
+)
 
-S = ((408000 * 8.4e-6) / focal_dist) ** 2  # Taille du pixel au sol (unit/??)
+S = ((p["ISS_alt"] * p["pixel_size"]) / p["focal_dist"]) ** 2
 a = np.deg2rad(angles)
 mids = np.concatenate([[a[0]], np.mean([a[1:], a[:-1]], 0), [a[-1]]])
 sinx = 2 * np.pi * (np.cos(mids[:-1]) - np.cos(mids[1:]))
@@ -90,38 +51,29 @@ sinx = 2 * np.pi * (np.cos(mids[:-1]) - np.cos(mids[1:]))
 # Intensity: (nw/sr/cm^2/angstrom) We suppose const value on photopic bandwidth
 # Formula: I = DNB * S / integral( R(lambd) * T(lambd) *
 # (1/pi* p(lambd)* F(lambd) + G(lambd))) dlambd)
-integral = dict()
-for lop in lops:
-    F = np.sum(lops[lop][angles > 90] * sinx[angles > 90])
-    for spct in spcts:
-        integral[lop, spct] = S / (
-            (
-                sum(
-                    spcts[spct]
-                    * (1 / np.pi * asphalt * F + lops[lop][31])
-                    * norm_spectrum
-                )
-            )
-            * (wl[1] - wl[0])
-        )
-
-
-# Attributing POW to pixels
-POW = np.zeros(len(keys))
-for idx in range(len(keys)):
-    POW[idx] = (
-        integral[keys[idx]] * files["intensity"][idx] * 1e-5 * vband_width * 10
-    )  # factor 10 to convert nm to angstrom
-
+integral = S / np.trapz(
+    spcts.T
+    * (
+        refl[:, None] / np.pi * np.sum(lops[:, angles > 90], axis=1)
+        + lops[:, p["obs_angle"]]
+    )
+    * norm_spectrum[:, None],
+    x=wav,
+    axis=0,
+)
 
 print("Creating discrete inventory..")
-df = pd.DataFrame(files["coord"], columns=["#lat", "lon"])
-df["pow"] = POW.tolist()
-df["hobs"] = 0
-df["dobs"] = 0
-df["fobs"] = 0
-df["hlamp"] = 0
-df["spct"] = arr_spcts.tolist()
-df["lop"] = arr_lops.tolist()
-df.to_csv(inventory_name, index=False, sep=" ")
+df = pd.read_pickle(f"{p['wd']}/xyz.pickle")
+techs_idx = df["tech"].astype(int) - 1
+inv = pd.DataFrame()
+inv["#lat"] = df["lats"]
+inv["lon"] = df["lons"]
+inv["pow"] = integral[techs_idx] * df["val"] * p["vband_width"] * 1e-4
+inv["hobs"] = 0
+inv["dobs"] = 0
+inv["fobs"] = 0
+inv["hlamp"] = 0
+inv["spct"] = abc["spct"].to_numpy()[techs_idx]
+inv["lop"] = abc["lop"].to_numpy()[techs_idx]
+inv.to_csv("inventory.txt", index=False, sep=" ")
 print("Done")

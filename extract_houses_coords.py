@@ -7,7 +7,7 @@ import yaml
 from osgeo import gdal
 from pyproj import Proj, transform
 
-with open("params") as f:
+with open("iss_params.in") as f:
     p = yaml.safe_load(f)
 
 

@@ -45,7 +45,7 @@ def open_tiff(filename, dtype=np.float32):
     return src, ar
 
 
-with open("params") as f:
+with open("iss_params.in") as f:
     p = yaml.safe_load(f)
 
 exp_folds = glob("iss???e*/")
