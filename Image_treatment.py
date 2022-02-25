@@ -1,5 +1,6 @@
 import sys
 
+import astropy.io.fits as pyfits
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
@@ -7,15 +8,36 @@ from astropy.convolution import Box2DKernel, convolve
 from osgeo import gdal
 from scipy import stats
 
-with open("params") as f:
-    p = yaml.safe_load(f)
 
-basename = p["basename"]
-intensity = p["intensity"]
-tech = p["tech"]
+def fits2tiff(filename):
+    hdulist = pyfits.open(filename)
+    other = np.asarray(hdulist[0].data)
+    earth = other.copy()
+    earth = np.float32(earth)
+    nrows, ncols = earth.shape[0], earth.shape[1]
+    filename = filename[:-5] + ".tiff"
+    dst_ds = gdal.GetDriverByName("GTiff").Create(
+        filename, ncols, nrows, 1, gdal.GDT_Float32
+    )
+    dst_ds.SetProjection("epsg:4326")
+    dst_ds.SetGeoTransform(
+        (
+            hdulist[0].header["CRVAL1"],
+            hdulist[0].header["CRPIX1"],
+            0,
+            hdulist[0].header["CRVAL2"],
+            0,
+            hdulist[0].header["CRPIX2"],
+        )
+    )
+    dst_ds.GetRasterBand(1).WriteArray(earth)
+    return filename
 
 
 def open_tiff(filename, dtype=np.float32):
+    if filename.endswith("fits"):
+        filename = fits2tiff(filename)
+
     # Load file, and access the band and get a NumPy array
     src = gdal.Open(filename, gdal.GA_Update)
     band = src.GetRasterBand(1)
@@ -23,37 +45,31 @@ def open_tiff(filename, dtype=np.float32):
     return src, ar
 
 
-# open intensity and technology (spectral class) images
-src, image_intensity = open_tiff(basename + intensity)  # Impact
-src, image_tech = open_tiff(basename + tech)
+with open("params") as f:
+    p = yaml.safe_load(f)
+basename = p["basename"]
 
+# open intensity and technology (spectral class) images
+src, image_intensity = open_tiff(f"popular/Corr_{basename}_ImpactVlG_GR.fits")
+src, image_tech = open_tiff(f"popular/Corr_{basename}CompositeW.fits")
 
 # open signal to noise ratio images
-src, image_snrB = open_tiff(basename + "SNRB4o2_rect.tiff")
-src, image_snrR = open_tiff(basename + "SNRR1o2_rect.tiff")
-src, image_snrG2 = open_tiff(basename + "SNRG2o2_rect.tiff")
-src, image_snrG3 = open_tiff(basename + "SNRG3o2_rect.tiff")
+images_snr = [
+    open_tiff(f"quality/Corr_{basename}SNR{band}o2_rect.tiff")[1]
+    for band in ["R1", "G2", "G3", "B4"]
+]
 
 # 0. Find saturated pixels that have no value in the intensity image and
 #    replace the nan by the maximum of the image
 sat = sys.float_info.max
 novalue = -1e30
 # changing sat values (nan) to number (sat value), the nan that corresponds
-#    to no data will change to 0
-image_snrB = np.nan_to_num(image_snrB)
-image_snrR = np.nan_to_num(image_snrR)
-image_snrG2 = np.nan_to_num(image_snrG2)
-image_snrG3 = np.nan_to_num(image_snrG3)
+# to no data will change to 0
+images_snr = np.nan_to_num(images_snr)
 # changing nan to very small number to be able to find them
-image_int = np.nan_to_num(image_intensity, nan=novalue)
 image_intensity[
-    ((image_int == novalue) | (image_int == 0))
-    & (
-        (image_snrB == sat)
-        | (image_snrR == sat)
-        | (image_snrG2 == sat)
-        | (image_snrG3 == sat)
-    )
+    (np.isnan(image_intensity) | (image_intensity == 0))
+    & (images_snr == sat).any(axis=0)
 ] = np.nanmax(image_intensity)
 
 # 1. Start of treatment : elimination of noise
@@ -157,16 +173,15 @@ def convolution_nb_void(image, im_tech, window, keep_value):
     mean = np.nanmean(image)
     nb_nan_binary_without0 = nb_nan_binary.copy()
     nb_nan_binary_without0[nb_nan_binary_without0 == 0] = 1
-    indices = np.argwhere(
+    mask = (
         (np.nan_to_num(image) == 0)
         & (nb_nan_binary > keep_value / window ** 2)
         & ((nb_nan_real / nb_nan_binary_without0) > mean)
     )
     tech = im_tech.copy()
     im_t = binary_mode_classes(im_tech, window)
-    for i, j in indices:
-        im[i][j] = nb_nan_real[i][j] / nb_nan_binary[i][j]
-        tech[i][j] = im_t[i][j]
+    im[mask] = nb_nan_real[mask] / nb_nan_binary[mask]
+    tech[mask] = im_t[mask]
 
     return im, tech
 
@@ -210,32 +225,28 @@ plt.show()
 
 
 def int_tech_comparison(intensity, im_tech):
-    im_i = intensity.copy()
     tech = im_tech.copy()
     im_t = binary_mode_classes(im_tech, window=3)
-    tech[((np.nan_to_num(im_i) == 0) & (np.nan_to_num(im_tech) != 0))] = 0
-    indices = np.argwhere(
-        (np.nan_to_num(im_i) != 0) & (np.nan_to_num(im_tech) == 0)
-    )
-    for i, j in indices:
-        tech[i][j] = im_t[i][j]
+    tech[((np.nan_to_num(intensity) == 0) & (np.nan_to_num(im_tech) != 0))] = 0
+    mask = (np.nan_to_num(intensity) != 0) & (np.nan_to_num(im_tech) == 0)
+    tech[mask] = im_t[mask]
     return tech
 
 
 image_tech = int_tech_comparison(image_intensity, image_tech)
 image_tech[image_tech == 0] = np.nan
 
-plt.figure()
-plt.imshow(image_intensity, cmap="rainbow")
-plt.colorbar()
-plt.title("Image Intensity")
-plt.show()
-
-plt.figure()
-plt.imshow(image_tech, cmap="rainbow")
-plt.colorbar()
-plt.title("Technology")
-plt.show()
+# plt.figure()
+# plt.imshow(image_intensity, cmap="rainbow")
+# plt.colorbar()
+# plt.title("Image Intensity")
+# plt.show()
+#
+# plt.figure()
+# plt.imshow(image_tech, cmap="rainbow")
+# plt.colorbar()
+# plt.title("Technology")
+# plt.show()
 
 
 # 7. Saving results
