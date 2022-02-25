@@ -54,7 +54,8 @@ sinx = 2 * np.pi * (np.cos(mids[:-1]) - np.cos(mids[1:]))
 integral = S / np.trapz(
     spcts.T
     * (
-        refl[:, None] / np.pi * np.sum(lops[:, angles > 90], axis=1)
+        (refl[:, None] / np.pi)
+        * np.sum(lops[:, angles > 90] * sinx[angles > 90], axis=1)
         + lops[:, p["obs_angle"]]
     )
     * norm_spectrum[:, None],
