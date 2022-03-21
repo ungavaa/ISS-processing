@@ -1,0 +1,14 @@
+# Source filtering
+distance: 0 # max distance from street, 0 to disable
+threshold: 0.1 # Limiting brightness fraction from max
+
+# ISS image properties
+ISS_alt: 408 # ISS altitude [km]
+focal_dist: 400 # Focal length of the camera [mm]
+pixel_size: 8.4 # Senssor pixel size [µm]
+obs_angle: 31 # Observing angle of the  ISS image [deg]
+bandwidth: 100 # Photopic bandwidth [nm]
+
+# Naming
+wd: processing # Working folder name
+tech_table: tech_table.csv # Class equivalence table filename
