@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import geopandas as gpd
-import MultiScaleData as MSD
+import illum.MultiScaleData as MSD
 import rasterio
 import rasterio.features
 import yaml
