@@ -6,7 +6,7 @@ import illum.pytools as pt
 import numpy as np
 import pandas as pd
 import yaml
-from pykml import parse
+from pykml import parser
 
 with open("iss_params.in") as f:
     p = yaml.safe_load(f)
