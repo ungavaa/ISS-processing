@@ -96,19 +96,16 @@ if p["distance"]:
     del X
 
     print("    Compute distance")
-    df = df[
-        nearest_edges.distance(
-            gpd.GeoSeries(
-                gpd.points_from_xy(df["lons"], df["lats"], crs=inProj)
-            ).to_crs(outProj),
-            align=False,
-        ).to_numpy()
-        < p["distance"]
-    ]
+    df["distance"] = nearest_edges.distance(
+        gpd.GeoSeries(
+            gpd.points_from_xy(df["lons"], df["lats"], crs=inProj)
+        ).to_crs(outProj),
+        align=False,
+    ).to_numpy()
 
 df.to_csv(
     f"{p['wd']}/obs.csv",
-    columns=["lons", "lats", "val"],
-    header=False,
+    # columns=["lons", "lats", "distance"],
+    header=True,
     index=False,
 )

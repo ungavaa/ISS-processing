@@ -6,9 +6,27 @@ import illum.pytools as pt
 import numpy as np
 import pandas as pd
 import yaml
+from pykml import parse
 
 with open("iss_params.in") as f:
     p = yaml.safe_load(f)
+
+exp_folds = glob("iss???e*/")
+if not exp_folds:
+    print("ERROR: Data folder not found. Please make sure it was not renamed.")
+    exit()
+if len(exp_folds) > 1:
+    print(f"ERROR: Too many data folders found. {exp_folds}")
+    exit()
+
+exp_fold = exp_folds[0]
+basename, ts = exp_fold.split("_")
+print(f"Data `{basename}` ({ts[:4]}-{ts[4:6]}-{ts[6:8]}) found.")
+
+with open(f"{exp_fold}/popular/{basename}RGBpos.kml") as f:
+    obs_angle = float(
+        str(parser.parse(f).getroot().getchildren()[0].description).split()[1]
+    )
 
 abc = pd.read_csv(p["tech_table"])
 error = False
@@ -56,7 +74,7 @@ integral = S / np.trapz(
     * (
         (refl[:, None] / np.pi)
         * np.sum(lops[:, angles > 90] * sinx[angles > 90], axis=1)
-        + lops[:, p["obs_angle"]]
+        + lops[:, obs_angle]
     )
     * norm_spectrum[:, None],
     x=wav,
