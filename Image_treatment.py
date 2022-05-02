@@ -128,7 +128,7 @@ def binary_mode_classes(im_tech, window):
         convolve(im_tech == i, Box2DKernel(width=window)) for i in range(1, 7)
     ]
     im_t = np.argmax(tech_conv, axis=0) + 1
-    im_t[np.prod(tech_conv, axis=0) == 0] = 0
+    im_t[~np.any(tech_conv, axis=0)] = 0
     return im_t
 
 
@@ -156,7 +156,7 @@ image_tech[image_tech == 0] = np.nan
 n_changed = 1
 while n_changed:
     image_intensity, image_tech, n_changed = convolution_nb_void(
-        image_intensity, image_tech, window=3, keep_value=4
+        image_intensity, image_tech, window=3, keep_value=3
     )
     print("Void pixel filled:", n_changed)
 
