@@ -5,7 +5,7 @@ import astropy.io.fits as pyfits
 import numpy as np
 import yaml
 from astropy.convolution import Box2DKernel, convolve
-from osgeo import gdal
+from osgeo import gdal, osr
 from scipy import stats
 
 
@@ -19,7 +19,9 @@ def fits2tiff(filename):
     dst_ds = gdal.GetDriverByName("GTiff").Create(
         filename, ncols, nrows, 1, gdal.GDT_Float32
     )
-    dst_ds.SetProjection("epsg:4326")
+    sr = osr.SpatialReference()
+    sr.ImportFromEPSG(4326)
+    dst_ds.SetProjection(sr.ExportToWkt())
     dst_ds.SetGeoTransform(
         (
             hdulist[0].header["CRVAL1"],
