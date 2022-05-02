@@ -169,18 +169,18 @@ while n_changed:
 def convolution_nb_nan(image, window, keep_value):
     im = image.copy()
     nb_nan = convolve(image_to_binary(image), Box2DKernel(width=window))
-    im[
-        (np.nan_to_num(im) != 0) & ((window ** 2 * nb_nan) < keep_value)
-    ] = np.nan
-    return im  # np.nan_to_num(im)
+    mask = (np.nan_to_num(im) != 0) & ((window ** 2 * nb_nan) < keep_value)
+    im[mask] = np.nan
+    return im, np.sum(mask)  # np.nan_to_num(im)
 
 
 # 2b. We create a binary image where value pixels are equal to 1 and NaN pixels
 #     are equal to 0
-image_intensity = convolution_nb_nan(image_intensity, window=4, keep_value=2)
-
-# 2c. Second convolution if necessary. If not, skip to step 3
-image_intensity = convolution_nb_nan(image_intensity, window=4, keep_value=2)
+n_changed = 1
+while n_changed:
+    image_intensity, n_changed = convolution_nb_nan(
+        image_intensity, window=5, keep_value=3
+    )
 
 
 # 3. Concordance between intensity and technology images
