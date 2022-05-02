@@ -1,6 +1,6 @@
 # Source filtering
-distance: 15 # max distance from street, 0 to disable
-threshold: 0 # Limiting brightness fraction from max
+distance_min: 15 # min distance from street, in metres
+distance_max: 15 # max distance from street, in metres
 
 # ISS image properties
 ISS_alt: 408 # ISS altitude [km]
