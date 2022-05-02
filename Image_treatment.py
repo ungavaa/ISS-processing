@@ -68,24 +68,10 @@ src, image_tech = open_tiff(
     f"{exp_fold}/popular/Corr_{basename}CompositeW.fits"
 )
 
-# open signal to noise ratio images
-images_snr = [
-    open_tiff(f"{exp_fold}/quality/Corr_{basename}SNR{band}o2_rect.tiff")[1]
-    for band in ["R1", "G2", "G3", "B4"]
-]
-
 # 0. Find saturated pixels that have no value in the intensity image and
 #    replace the nan by the maximum of the image
 sat = os.sys.float_info.max
 novalue = -1e30
-# changing sat values (nan) to number (sat value), the nan that corresponds
-# to no data will change to 0
-images_snr = np.nan_to_num(images_snr)
-# changing nan to very small number to be able to find them
-image_intensity[
-    (np.isnan(image_intensity) | (image_intensity == 0))
-    & (images_snr == sat).any(axis=0)
-] = np.nanmax(image_intensity)
 
 # 1. Start of treatment : elimination of noise
 # 1a. Eliminate negative data, mistake resulting of the pre-treatment
@@ -111,34 +97,11 @@ mean, median, standard_deviation, mode = compute_stats(image_intensity)
 small_values = image_intensity[image_intensity < median]
 # mean2, median2, standard_deviation2, mode2 = compute_stats(small_values)
 
-n, bins = np.histogram(
-    small_values[~np.isnan(small_values)].flatten(), bins=50
-)
-# index_max = np.argmax(n)
-maxi = 0
-for i, value in enumerate(n):
-    if value < maxi:
-        index = i
-        break
-    else:
-        maxi = value
-
-# 1d. Using the statistical data on hand, we estimate the value of the
-# background, defined as the center value of the bin with most pixels.
-# background= (bins[index_max]+bins[index_max+1])/2 + standard_deviation2*3
-background = bins[index + 1]  # the right hand border of the bin
-
-# this value can change. Modifie accordingly in order to achieve the best
-#    results (see step 1.f)
-image_intensity -= background
+image_intensity -= median
 
 # 1e. Eliminating negative pixels created by our treatment of the noise
 #     in the image
 image_intensity[image_intensity < 0] = np.nan
-small_values = image_intensity[image_intensity < median]
-n, bins = np.histogram(
-    small_values[~np.isnan(small_values)].flatten(), bins=100
-)
 
 # 1f. Compare your image to the ones in ReadMe for reference as well as Google
 #     maps to know which zones should emit light or not. We want to eliminate a
@@ -184,13 +147,16 @@ def convolution_nb_void(image, im_tech, window, keep_value):
     im[mask] = nb_nan_real[mask] / nb_nan_binary[mask]
     tech[mask] = im_t[mask]
 
-    return im, tech
+    return im, tech, np.sum(mask)
 
 
 image_tech[image_tech == 0] = np.nan
-image_intensity, image_tech = convolution_nb_void(
-    image_intensity, image_tech, window=3, keep_value=5
-)
+n_changed = 1
+while n_changed:
+    image_intensity, image_tech, n_changed = convolution_nb_void(
+        image_intensity, image_tech, window=3, keep_value=4
+    )
+    print("Void pixel filled:", n_changed)
 
 
 # 2. Elimination of remaining values in dark aeras
