@@ -181,6 +181,7 @@ while n_changed:
     image_intensity, n_changed = convolution_nb_nan(
         image_intensity, window=5, keep_value=3
     )
+    print("Isolated pixel removed:", n_changed)
 
 
 # 3. Concordance between intensity and technology images
