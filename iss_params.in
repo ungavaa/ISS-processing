@@ -2,6 +2,8 @@
 distance_min: 15 # min distance from street, in metres
 distance_max: 15 # max distance from street, in metres
 
+threshold: 0.01 # max recommended 0.02, min recommended 0.002
+
 # ISS image properties
 ISS_alt: 408 # ISS altitude [km]
 focal_dist: 400 # Focal length of the camera [mm]

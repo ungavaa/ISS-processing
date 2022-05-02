@@ -80,26 +80,11 @@ novalue = -1e30
 image_intensity[image_intensity < 0] = np.nan
 
 
-# 1b. Statistical data
-def compute_stats(image):
-    mean = np.nanmean(image)
-    median = np.nanmedian(image)
-    stdev = np.nanstd(image)
-    mode = stats.mode(image[~np.isnan(image)], axis=None)[0][0]
-    print(f"{mode=:.3g}  {mean=:.3g}  {median=:.3g}  {stdev=:.3g}")
-    return mean, median, stdev, mode
-
-
-mean, median, standard_deviation, mode = compute_stats(image_intensity)
-
 # 1c. We create a temporary map with the pixels of less value since the noise
 #     should be smaller or around the same value as the less valuable pixels.
 #     We then extract statistical data of these small values
 
-small_values = image_intensity[image_intensity < median]
-# mean2, median2, standard_deviation2, mode2 = compute_stats(small_values)
-
-image_intensity -= median
+image_intensity -= np.nanmax(image_intensity) * p["threshold"]
 
 # 1e. Eliminating negative pixels created by our treatment of the noise
 #     in the image
