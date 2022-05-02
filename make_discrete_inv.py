@@ -74,7 +74,7 @@ integral = S / np.trapz(
     * (
         (refl[:, None] / np.pi)
         * np.sum(lops[:, angles > 90] * sinx[angles > 90], axis=1)
-        + lops[:, obs_angle]
+        + lops[:, round(obs_angle)]
     )
     * norm_spectrum[:, None],
     x=wav,
