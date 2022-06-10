@@ -12,7 +12,7 @@ Follow the installation guide til steps 6 and make sure you have run the **illum
 
 
 
-<h2> :clipboard: Execution Instruction</h2>
+<h2> Execution Instruction</h2>
 
 You will need to **modify the parameters** at the beginning of each execution script. It is recommended to put the different class spectrums in another directory.
 
