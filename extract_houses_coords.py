@@ -32,6 +32,7 @@ src, im = open_tiff(f"{p['wd']}/Vrad.tiff")
 GT = src.GetGeoTransform()
 
 src, tech = open_tiff(f"{p['wd']}/tech.tiff")
+src, domain = open_tiff(f"{p['wd']}/domain.tiff")
 
 df = pd.DataFrame()
 Y, X = np.where((im > 0) & (tech > 0))
@@ -39,6 +40,18 @@ df["val"] = im[Y, X]
 df["tech"] = tech[Y, X]
 df["lons"], df["lats"] = geotransform(X, Y, GT)
 df.to_pickle(f"{p['wd']}/xyz.pickle")
+
+df = pd.DataFrame()
+Y, X = np.where(domain)
+df["lons"], df["lats"] = geotransform(X, Y, GT)
+df["X"] = X
+df["Y"] = Y
+
+outProj = (
+    "epsg:32"
+    + ("6" if np.mean(df["lats"]) >= 0 else "7")
+    + "%02d" % (np.mean(df["lons"]) / 6 + 31)
+)  # WGS84/UTM
 
 print("Build convex hull")
 corner_mask = (
@@ -50,16 +63,6 @@ corner_mask = (
 corner_pts = df[corner_mask][["lons", "lats"]].to_numpy()
 convex_hull = geometry.MultiPoint(corner_pts).convex_hull
 
-df = pd.DataFrame()
-Y, X = np.where(~np.isnan(im))
-df["val"] = im[Y, X]
-df["lons"], df["lats"] = geotransform(X, Y, GT)
-
-outProj = (
-    "epsg:32"
-    + ("6" if np.mean(df["lats"]) >= 0 else "7")
-    + "%02d" % (np.mean(df["lons"]) / 6 + 31)
-)  # WGS84/UTM
 
 print("Load graph")
 Graph = ox.graph_from_polygon(
@@ -103,7 +106,7 @@ df["distance"] = nearest_edges.distance(
 
 df.to_csv(
     f"{p['wd']}/obs.csv",
-    columns=["lons", "lats", "distance"],
+    columns=["lons", "lats", "X", "Y", "distance"],
     header=True,
     index=False,
 )

@@ -1,3 +1,4 @@
+import errno
 import os
 from glob import glob
 
@@ -41,6 +42,10 @@ def open_tiff(filename, dtype=np.float32):
         filename = fits2tiff(filename)
 
     # Load file, and access the band and get a NumPy array
+    if not os.path.isfile(filename):
+        raise FileNotFoundError(
+            errno.ENOENT, os.strerror(errno.ENOENT), filename
+        )
     src = gdal.Open(filename, gdal.GA_Update)
     band = src.GetRasterBand(1)
     ar = band.ReadAsArray()
@@ -69,6 +74,11 @@ src, image_intensity = open_tiff(
 src, image_tech = open_tiff(
     f"{exp_fold}/popular/Corr_{basename}CompositeW.fits"
 )
+
+# Defining domain
+
+src, domain = open_tiff(f"{exp_fold}/quality/{basename}RGBdisto2_rect.tiff")
+domain[domain != 0] = 1
 
 # 0. Find saturated pixels that have no value in the intensity image and
 #    replace the nan by the maximum of the image
@@ -205,5 +215,6 @@ def save_geotiff(filename, data):
 if not os.path.isdir(p["wd"]):
     os.makedirs(p["wd"])
 
-save_geotiff(f"{p['wd']}/Vrad", image_intensity)
-save_geotiff(f"{p['wd']}/tech", image_tech)
+save_geotiff(p["wd"] + "/Vrad", image_intensity)
+save_geotiff(p["wd"] + "/tech", image_tech)
+save_geotiff(p["wd"] + "/domain", domain)
