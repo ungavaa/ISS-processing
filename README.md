@@ -30,4 +30,4 @@ gdal_translate -of XYZ PATH_RASTER.tiff PATH_XYZ.csv
 
 
 <h2> Contributors </h2>
-This work was made by Martin Aubé, Julien-Pierre Houle, Nikki Veilleux, Justine Desmarais, Emie Bordeleau and Alexandre Simoneau.
+This work was made by Martin Aubé, Julien-Pierre Houle, Nikki Veilleux, Justine Desmarais, Emie Bordeleau, Hector Linares Arroyo and Alexandre Simoneau.
