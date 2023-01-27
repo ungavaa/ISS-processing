@@ -78,7 +78,7 @@ def save_geotiff(filename, data):
 # default Parameters
 FWHM = 13
 IntegHalfSize = 1
-minflux = 0.02  # W/sr/m^2 Photopic
+minflux = 0.01  # W/sr/m^2 Photopic
 # load command line parameters
 Ifile = input(sys.argv[1:])
 outname = Ifile + ".csv"
@@ -96,20 +96,22 @@ nx = np.shape(imag)[1]
 imag[np.isnan(imag)] = 0
 # Search for sources
 mean, median, std = sigma_clipped_stats(imag, sigma=3.0)
-daofind = DAOStarFinder(fwhm=1.0, threshold=5 * std)
+daofind = DAOStarFinder(fwhm=1.5, threshold=5 * std)
 sources = daofind(imag)
+
 # print(sources)
 positions = np.transpose((sources["xcentroid"], sources["ycentroid"]))
 # positions = (np.rint(positions)).astype(int)
+print("Detected points : ", np.shape(positions)[0])
 Flux = np.zeros(np.shape(positions)[0])
 Back = np.zeros(np.shape(positions)[0])
 for nd in range(np.shape(positions)[0]):
-    xsa = (np.rint(positions[nd, 0])).astype(int)
-    ysa = (np.rint(positions[nd, 1])).astype(int)
+    xsa = round(positions[nd, 0])
+    ysa = round(positions[nd, 1])
     Flux[nd] = np.sum(
         imag[
-            ysa - IntegHalfSize : ysa + IntegHalfSize,
-            xsa - IntegHalfSize : xsa + IntegHalfSize,
+            ysa - IntegHalfSize : ysa + 2 * IntegHalfSize,
+            xsa - IntegHalfSize : xsa + 2 * IntegHalfSize,
         ]
     )
 sources = sources[Flux > minflux]
