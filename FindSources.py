@@ -78,7 +78,7 @@ def save_geotiff(filename, data):
 # default Parameters
 FWHM = 13
 IntegHalfSize = 1
-minflux = 0.01  # W/sr/m^2 Photopic
+minflux = 0.03  # W/sr/m^2 Photopic
 # load command line parameters
 Ifile = input(sys.argv[1:])
 outname = Ifile + ".csv"
