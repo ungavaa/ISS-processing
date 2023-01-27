@@ -60,6 +60,19 @@ def open_tiff(filename, dtype=np.float32):
     return src, ar
 
 
+def save_geotiff(filename, data):
+    nband = 1
+    nrow, ncol = data.shape
+    driver = gdal.GetDriverByName("GTiff")
+    dst_dataset = driver.Create(filename + ".tiff", ncol, nrow, nband, gdal.GDT_Float32)
+    # sets same geotransform as input
+    dst_dataset.SetGeoTransform(src.GetGeoTransform())
+    # sets same projection as input
+    dst_dataset.SetProjection(src.GetProjection())
+    dst_dataset.GetRasterBand(1).WriteArray(data.astype(float))
+    dst_dataset = None
+
+
 # ================================================
 # MAIN
 # default Parameters
@@ -78,6 +91,8 @@ if os.path.exists(outname) == False:
     o.write(second_line)
     o.close()
 src, imag = open_tiff(f"{Ifile}")
+ny = np.shape(imag)[0]
+nx = np.shape(imag)[1]
 imag[np.isnan(imag)] = 0
 # Search for sources
 mean, median, std = sigma_clipped_stats(imag, sigma=3.0)
@@ -108,8 +123,8 @@ plt.colorbar()
 apertures.plot(color="white", lw=1.0, alpha=0.3)
 Flux = Flux[Flux > minflux]
 # TODO : transform x, y into lat,lon if necessary and save it in output csv
-
-
+imagout = np.zeros([ny, nx])
+imagout[:] = np.nan
 # write the sources to the output csv
 print("Number of light points : ", np.shape(Flux)[0])
 for no in range(np.shape(Flux)[0]):
@@ -125,4 +140,6 @@ for no in range(np.shape(Flux)[0]):
     # print(no, outputline)
     o.write(outputline)
     o.close()
+    imagout[round(positions[no, 1]), round(positions[no, 0])] = Flux[no]
 plt.show()
+save_geotiff("Output", imagout)
