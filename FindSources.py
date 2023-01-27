@@ -4,25 +4,17 @@
 import getopt
 import os
 import sys
+
+import astropy.io.fits as pyfits
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import yaml
-from datetime import date, timedelta
-from astropy.convolution import Box2DKernel, Gaussian2DKernel, convolve
-from astropy.stats import SigmaClip, sigma_clipped_stats
-from astropy.visualization import SqrtStretch, simple_norm
+from astropy.stats import sigma_clipped_stats
+from astropy.visualization import SqrtStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
-from numpy import inf
-from photutils.aperture import CircularAperture
-from photutils.background import Background2D, MedianBackground
-from photutils.detection import DAOStarFinder
-from scipy import ndimage, stats
-from scipy.ndimage import gaussian_filter
-from scipy.spatial.distance import cdist
-from scipy.optimize import curve_fit
 from osgeo import gdal, osr
-import statistics as st
+from photutils.aperture import CircularAperture
+from photutils.detection import DAOStarFinder
+
 
 # reading command line parameters
 def input(argv):
@@ -49,6 +41,33 @@ def input(argv):
     return Ifile
 
 
+def fits2tiff(filename):
+    hdulist = pyfits.open(filename)
+    other = np.asarray(hdulist[0].data)
+    earth = other.copy()
+    earth = np.float32(earth)
+    nrows, ncols = earth.shape[0], earth.shape[1]
+    filename = filename[:-5] + ".tiff"
+    dst_ds = gdal.GetDriverByName("GTiff").Create(
+        filename, ncols, nrows, 1, gdal.GDT_Float32
+    )
+    sr = osr.SpatialReference()
+    sr.ImportFromEPSG(4326)
+    dst_ds.SetProjection(sr.ExportToWkt())
+    dst_ds.SetGeoTransform(
+        (
+            hdulist[0].header["CRVAL1"],
+            hdulist[0].header["CRPIX1"],
+            0,
+            hdulist[0].header["CRVAL2"],
+            0,
+            hdulist[0].header["CRPIX2"],
+        )
+    )
+    dst_ds.GetRasterBand(1).WriteArray(earth)
+    return filename
+
+
 def open_tiff(filename, dtype=np.float32):
     if filename.endswith("fits"):
         filename = fits2tiff(filename)
@@ -64,7 +83,9 @@ def save_geotiff(filename, data):
     nband = 1
     nrow, ncol = data.shape
     driver = gdal.GetDriverByName("GTiff")
-    dst_dataset = driver.Create(filename + ".tiff", ncol, nrow, nband, gdal.GDT_Float32)
+    dst_dataset = driver.Create(
+        filename + ".tiff", ncol, nrow, nband, gdal.GDT_Float32
+    )
     # sets same geotransform as input
     dst_dataset.SetGeoTransform(src.GetGeoTransform())
     # sets same projection as input
@@ -83,7 +104,7 @@ minflux = 0.03  # W/sr/m^2 Photopic
 Ifile = input(sys.argv[1:])
 outname = Ifile + ".csv"
 # create the data file if it do not exists
-if os.path.exists(outname) == False:
+if not os.path.exists(outname):
     o = open(outname, "w")
     first_line = "Xpos,Ypos,Flux \n"
     second_line = "(pixel),(pixel),(W/sr/m^2) \n"
@@ -110,8 +131,8 @@ for nd in range(np.shape(positions)[0]):
     ysa = round(positions[nd, 1])
     Flux[nd] = np.sum(
         imag[
-            ysa - IntegHalfSize : ysa + 2 * IntegHalfSize,
-            xsa - IntegHalfSize : xsa + 2 * IntegHalfSize,
+            ysa - IntegHalfSize : ysa + IntegHalfSize + 1,
+            xsa - IntegHalfSize : xsa + IntegHalfSize + 1,
         ]
     )
 sources = sources[Flux > minflux]
@@ -119,7 +140,9 @@ positions = positions[Flux > minflux]
 norm = ImageNormalize(stretch=SqrtStretch())
 plt.figure()
 apertures = CircularAperture(positions, r=IntegHalfSize + 0.5)
-plt.imshow(imag, cmap="magma", origin="lower", norm=norm, interpolation="nearest")
+plt.imshow(
+    imag, cmap="magma", origin="lower", norm=norm, interpolation="nearest"
+)
 plt.colorbar()
 apertures.plot(color="white", lw=1.0, alpha=0.3)
 Flux = Flux[Flux > minflux]
