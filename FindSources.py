@@ -107,6 +107,9 @@ plt.imshow(imag, cmap="magma", origin="lower", norm=norm, interpolation="nearest
 plt.colorbar()
 apertures.plot(color="white", lw=1.0, alpha=0.3)
 Flux = Flux[Flux > minflux]
+# TODO : transform x, y into lat,lon if necessary and save it in output csv
+
+
 # write the sources to the output csv
 print("Number of light points : ", np.shape(Flux)[0])
 for no in range(np.shape(Flux)[0]):
