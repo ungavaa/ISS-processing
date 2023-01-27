@@ -78,7 +78,7 @@ def save_geotiff(filename, data):
 # default Parameters
 FWHM = 13
 IntegHalfSize = 1
-minflux = 0.04  # W/sr/m^2 Photopic
+minflux = 0.02  # W/sr/m^2 Photopic
 # load command line parameters
 Ifile = input(sys.argv[1:])
 outname = Ifile + ".csv"
@@ -96,14 +96,13 @@ nx = np.shape(imag)[1]
 imag[np.isnan(imag)] = 0
 # Search for sources
 mean, median, std = sigma_clipped_stats(imag, sigma=3.0)
-daofind = DAOStarFinder(fwhm=3.5, threshold=5 * std)
+daofind = DAOStarFinder(fwhm=1.0, threshold=5 * std)
 sources = daofind(imag)
-print(sources)
+# print(sources)
 positions = np.transpose((sources["xcentroid"], sources["ycentroid"]))
 # positions = (np.rint(positions)).astype(int)
 Flux = np.zeros(np.shape(positions)[0])
 Back = np.zeros(np.shape(positions)[0])
-print(np.shape(positions)[0])
 for nd in range(np.shape(positions)[0]):
     xsa = (np.rint(positions[nd, 0])).astype(int)
     ysa = (np.rint(positions[nd, 1])).astype(int)
@@ -141,5 +140,5 @@ for no in range(np.shape(Flux)[0]):
     o.write(outputline)
     o.close()
     imagout[round(positions[no, 1]), round(positions[no, 0])] = Flux[no]
-plt.show()
+# plt.show()
 save_geotiff("Output", imagout)
